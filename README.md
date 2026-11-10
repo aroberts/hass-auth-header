@@ -53,15 +53,14 @@ See https://github.com/goauthentik/authentik/issues/884#issuecomment-851542477
 
 ## How it works
 
-On boot, two main things are done when the integration is enabled:
+On boot, the Header Authentication Provider is injected into the providers, *before* the other authentication providers.
+This ensures that Header auth is tried first, and if it fails the user can still use username/password.
 
-1. The default `LoginFlowIndexView` view is replaced. This view is called when you submit the login form. The replacement for this view, `RequestLoginFlowResourceView`, simply adds the HTTP Request to the context. This context is passed to authentication Providers.
+When the frontend starts a login flow, the provider reads the in-flight HTTP request from Home Assistant's
+`current_request` context variable. It checks that the TCP peer (the proxy itself, not the `X-Forwarded-For` client)
+is in `trusted_proxies`, then matches the configured header against usernames and full names.
 
-    Normally the Request is not included, as none of the providers require it.
-
-2. The Header Authentication Provider is injected into the providers, *before* the other authentication providers.
-
-    This ensures that Header auth is tried first, and if it fails the user can still use username/password.
+Requires Home Assistant 2026.11 or newer.
 
 
 ## Help! Everything is broken!

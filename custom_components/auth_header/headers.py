@@ -3,21 +3,37 @@
 Allow access to users based on a header set by a reverse-proxy.
 """
 import logging
+from ipaddress import ip_address
 from typing import Any, Dict, List, Optional, cast
 
 from aiohttp.web import Request
-from homeassistant.auth.models import Credentials, User, UserMeta
+from homeassistant.auth import InvalidAuthError
+from homeassistant.auth.models import AuthFlowContext, Credentials, User, UserMeta
 from homeassistant.auth.providers import AUTH_PROVIDERS, AuthProvider, LoginFlow
-from homeassistant.auth.providers.trusted_networks import (
-    InvalidAuthError,
-    InvalidUserError,
-    IPAddress,
-)
+from homeassistant.auth.providers.trusted_networks import InvalidUserError, IPAddress
 from homeassistant.core import callback
+from homeassistant.helpers.http import current_request
 
 CONF_USERNAME_HEADER = "username_header"
 CONF_ALLOW_BYPASS_LOGIN = "allow_bypass_login"
+CONF_DEBUG = "debug"
 _LOGGER = logging.getLogger(__name__)
+
+
+def _connected_ip(request: Request) -> Optional[IPAddress]:
+    """Return the IP of the TCP peer, ignoring X-Forwarded-For.
+
+    HA's forwarded middleware rewrites request.remote to the client IP, but access must be
+    checked against the proxy that actually connected.
+    """
+    if request.transport is None:
+        return None
+    peername = request.transport.get_extra_info("peername")
+    if not peername:
+        return None
+    if isinstance(peername, (list, tuple)):
+        peername = peername[0]
+    return ip_address(peername)
 
 
 @AUTH_PROVIDERS.register("header")
@@ -38,33 +54,33 @@ class HeaderAuthProvider(AuthProvider):
         """Header Authentication Provider does not support MFA."""
         return False
 
-    async def async_login_flow(self, context: Optional[Dict]) -> LoginFlow:
-        """Return a flow to login."""
-        assert context is not None
+    async def async_login_flow(self, context: Optional[AuthFlowContext]) -> LoginFlow:
+        """Return a flow to login.
+
+        Called from inside the POST /auth/login_flow handler, so current_request holds the
+        login request.
+        """
+        allow_bypass = self.config[CONF_ALLOW_BYPASS_LOGIN]
+        request = current_request.get()
+        if request is None:
+            _LOGGER.info("No current request, returning empty flow")
+            return HeaderLoginFlow(self, None, [], None, allow_bypass)
+
+        if self.config[CONF_DEBUG]:
+            _LOGGER.debug("Login flow request headers: %s", dict(request.headers))
+        conn_ip = _connected_ip(request)
+        _LOGGER.debug("Got connected IP %s", conn_ip)
+
         header_name = self.config[CONF_USERNAME_HEADER]
-        request = cast(Request, context.get("request"))
         if header_name not in request.headers:
             _LOGGER.info("No header set, returning empty flow")
-            return HeaderLoginFlow(
-                self,
-                None,
-                [],
-                cast(IPAddress, context.get("conn_ip_address")),
-                self.config[CONF_ALLOW_BYPASS_LOGIN],
-            )
+            return HeaderLoginFlow(self, None, [], conn_ip, allow_bypass)
         remote_user = request.headers[header_name].casefold()
-        # Translate username to id
         users = await self.store.async_get_users()
         available_users = [
             user for user in users if not user.system_generated and user.is_active
         ]
-        return HeaderLoginFlow(
-            self,
-            remote_user,
-            available_users,
-            cast(IPAddress, context.get("conn_ip_address")),
-            self.config[CONF_ALLOW_BYPASS_LOGIN],
-        )
+        return HeaderLoginFlow(self, remote_user, available_users, conn_ip, allow_bypass)
 
     async def async_user_meta_for_credentials(
         self, credentials: Credentials
@@ -95,12 +111,14 @@ class HeaderAuthProvider(AuthProvider):
         raise InvalidUserError
 
     @callback
-    def async_validate_access(self, ip_addr: IPAddress) -> None:
+    def async_validate_access(self, ip_addr: Optional[IPAddress]) -> None:
         """Make sure the access is from trusted_proxies.
 
         Raise InvalidAuthError if not.
         Raise InvalidAuthError if trusted_proxies is not configured.
         """
+        if ip_addr is None:
+            raise InvalidAuthError("Connected IP unknown")
         if not self.hass.http.trusted_proxies:
             _LOGGER.warning("trusted_proxies is not configured")
             raise InvalidAuthError("trusted_proxies is not configured")
@@ -119,9 +137,9 @@ class HeaderLoginFlow(LoginFlow):
     def __init__(
         self,
         auth_provider: HeaderAuthProvider,
-        remote_user: str,
+        remote_user: Optional[str],
         available_users: List[User],
-        ip_address: IPAddress,
+        ip_address: Optional[IPAddress],
         allow_bypass_login: bool,
     ) -> None:
         """Initialize the login flow."""
