@@ -4,15 +4,20 @@ Allow access to users based on a header set by a reverse-proxy.
 """
 import logging
 from ipaddress import ip_address
-from typing import Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from aiohttp.web import Request
 from homeassistant.auth import InvalidAuthError
-from homeassistant.auth.models import AuthFlowContext, Credentials, User, UserMeta
+from homeassistant.auth.models import Credentials, User, UserMeta
 from homeassistant.auth.providers import AUTH_PROVIDERS, AuthProvider, LoginFlow
 from homeassistant.auth.providers.trusted_networks import InvalidUserError, IPAddress
+# Exported from components.http in every release; helpers.http only has it from 2024.6.
+from homeassistant.components.http import current_request
 from homeassistant.core import callback
-from homeassistant.helpers.http import current_request
+
+if TYPE_CHECKING:
+    # Typing only: added between 2024.7 and 2025.6.
+    from homeassistant.auth.models import AuthFlowContext
 
 CONF_USERNAME_HEADER = "username_header"
 CONF_ALLOW_BYPASS_LOGIN = "allow_bypass_login"
@@ -54,7 +59,7 @@ class HeaderAuthProvider(AuthProvider):
         """Header Authentication Provider does not support MFA."""
         return False
 
-    async def async_login_flow(self, context: Optional[AuthFlowContext]) -> LoginFlow:
+    async def async_login_flow(self, context: Optional["AuthFlowContext"]) -> LoginFlow:
         """Return a flow to login.
 
         Called from inside the POST /auth/login_flow handler, so current_request holds the

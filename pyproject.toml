@@ -6,7 +6,7 @@ authors = ["Jens Langhammer <jens.langhammer@beryju.org>"]
 license = "GPL"
 
 [tool.poetry.dependencies]
-python = "^3.14"
+python = "^3.11"
 
 [tool.poetry.group.dev.dependencies]
 homeassistant = "*"

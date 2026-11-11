@@ -60,7 +60,7 @@ When the frontend starts a login flow, the provider reads the in-flight HTTP req
 `current_request` context variable. It checks that the TCP peer (the proxy itself, not the `X-Forwarded-For` client)
 is in `trusted_proxies`, then matches the configured header against usernames and full names.
 
-Requires Home Assistant 2026.11 or newer.
+Tested on Home Assistant 2023.3 through 2026.11.
 
 
 ## Help! Everything is broken!
