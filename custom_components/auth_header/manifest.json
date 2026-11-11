@@ -1,7 +1,7 @@
 {
   "domain": "auth_header",
   "name": "HTTP Header Authentication",
-  "documentation": "https://github.com/BeryJu/hass-auth-header",
+  "documentation": "https://github.com/aroberts/hass-auth-header",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [],
@@ -11,6 +11,6 @@
     "frontend",
     "http"
   ],
-  "codeowners": ["@BeryJu"],
+  "codeowners": ["@aroberts"],
   "version": "1.6"
 }

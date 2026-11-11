@@ -2,7 +2,7 @@
 name = "hass-auth-header"
 version = "0.1.0"
 description = ""
-authors = ["Jens Langhammer <jens.langhammer@beryju.org>"]
+authors = ["Jens Langhammer <jens.langhammer@beryju.org>", "Andrew Roberts"]
 license = "GPL"
 
 [tool.poetry.dependencies]

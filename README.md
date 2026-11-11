@@ -1,9 +1,8 @@
-# ARCHIVED
-
-There are now functioning OIDC plugins for HASS and there will be no more future development on this plugin:
-
-- https://github.com/cavefire/hass-openid
-- https://github.com/christiaangoossens/hass-oidc-auth
+> This is a maintained fork of [BeryJu/hass-auth-header](https://github.com/BeryJu/hass-auth-header),
+> which was archived in October 2025. Upstream recommends these OIDC integrations as alternatives:
+>
+> - https://github.com/cavefire/hass-openid
+> - https://github.com/christiaangoossens/hass-oidc-auth
 
 ---
 
@@ -20,7 +19,7 @@ checked against usernames AND full names. Users have to be created in Home Assis
 
 1. Add this repository to [HACS](https://hacs.xyz/).
 
-   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=BeryJu&repository=hass-auth-header&category=integration)
+   [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=aroberts&repository=hass-auth-header&category=integration)
 
 
 2. Update your configuration.yaml file with
