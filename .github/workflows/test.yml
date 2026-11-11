@@ -1,0 +1,66 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Weekly, to catch new Home Assistant releases.
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: HA ${{ matrix.ha }}
+    runs-on: ubuntu-latest
+    # The latest row runs core ahead of the harness and may break on harness skew.
+    continue-on-error: ${{ matrix.ha == 'latest' }}
+    env:
+      # uv-managed Pythons ship headers, for dependencies that only publish sdists.
+      UV_PYTHON_PREFERENCE: only-managed
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each row is the newest harness release pinned to that core. The rows cover both
+          # sides of every version branch in the integration:
+          #   register_static_path < 2024.7 <= StaticPathConfig
+          #   voluptuous <= 2026.9 < probatio
+          #   PKCE on /auth/login_flow from 2026.10
+          # lru-dict 1.1.8 has no wheel there and fails to build under GCC 14 without cflags.
+          - ha: 2023.3.6
+            harness: 0.13.10
+            python: "3.11"
+            extra: "setuptools<70 aiohttp_cors"
+            cflags: "-Wno-error=incompatible-pointer-types"
+          - { ha: 2024.1.5, harness: 0.13.91, python: "3.12", extra: "josepy<2" }
+          - { ha: 2024.6.4, harness: 0.13.136, python: "3.12", extra: "josepy<2" }
+          - { ha: 2024.7.4, harness: 0.13.148, python: "3.12", extra: "josepy<2" }
+          - { ha: 2025.6.3, harness: 0.13.254, python: "3.13", extra: "pycares<5" }
+          - { ha: 2026.9.4, harness: 0.13.367, python: "3.14", extra: "" }
+          - { ha: 2026.10.4, harness: 0.13.375, python: "3.14", extra: "" }
+          - { ha: latest, harness: latest, python: "3.14", extra: "" }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python }}
+          activate-environment: true
+          no-project: true
+          cache-suffix: ha-${{ matrix.ha }}
+      - name: Install Home Assistant and test harness
+        # Passed through env, never interpolated: requirements like "josepy<2" contain shell
+        # metacharacters. EXTRA is a space-separated list.
+        env:
+          HARNESS: ${{ matrix.harness }}
+          HA: ${{ matrix.ha }}
+          EXTRA: ${{ matrix.extra }}
+          CFLAGS: ${{ matrix.cflags }}
+        run: |
+          read -ra extra <<< "$EXTRA"
+          scripts/ci_install.sh "$HARNESS" "$HA" "${extra[@]}"
+      - name: Run tests
+        run: python scripts/run_tests.py -v

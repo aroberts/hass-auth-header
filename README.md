@@ -63,6 +63,23 @@ is in `trusted_proxies`, then matches the configured header against usernames an
 Tested on Home Assistant 2023.3 through 2026.11.
 
 
+## Testing
+
+`tests/` holds end-to-end login flow tests that run against a real Home Assistant core.
+CI runs them on every version in `.github/workflows/test.yml`. That matrix brackets each
+version branch in the integration, and includes a non-blocking row for the newest release.
+
+To run one CI row locally (requires [uv](https://docs.astral.sh/uv/)):
+
+```sh
+make test                                   # newest Home Assistant
+make test TEST_HA=2024.6.4 TEST_HARNESS=0.13.136 TEST_PYTHON=3.12 TEST_EXTRA='josepy<2'
+```
+
+When a new Home Assistant release ships, add a matrix row once
+[pytest-homeassistant-custom-component](https://pypi.org/project/pytest-homeassistant-custom-component/)
+publishes a release pinned to it.
+
 ## Help! Everything is broken!
 
 If anything goes wrong or Home Assistant fails to load the component correctly, simply remove the `auth_header` block from your configuration file and restart HASS.
