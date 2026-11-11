@@ -45,7 +45,8 @@ jobs:
           - { ha: latest, harness: latest, python: "3.14", extra: "" }
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv publishes no major-version tags, only exact releases.
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python }}
           activate-environment: true
